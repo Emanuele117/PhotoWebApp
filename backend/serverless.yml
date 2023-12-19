@@ -1,0 +1,62 @@
+org: emacosmic
+app: backend
+service: backend
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  environment: 
+    BUCKET_NAME: ${self:service}-public-photos-${sls:stage}
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+          - "s3:*"
+          Resource: "arn:aws:s3:::${self:service}-public-photos-${sls:stage}"
+        - Effect: Allow
+          Action: 
+            - "rekognition:detectLabels"
+          Resource: "*"
+resources: 
+  Resources: 
+    PhotoBucket:
+      Type: AWS::S3::Bucket
+      Properties: 
+        BucketName: ${self:service}-public-photos-${sls:stage}
+
+        #Granting public aaccess to bucket
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: false
+          BlockPublicPolicy: false
+          IgnorePublicAcls: false
+          RestrictPublicBuckets: false
+    PhotoBucketAllowPublicReadPolicy:
+     Type: AWS::S3::BucketPolicy
+     Properties:
+      Bucket: !Ref PhotoBucket
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - Effect: Allow
+            Action: 
+              - "s3:GetObject"
+            Resource:
+              - !Join ['/', [!GetAtt [PhotoBucket, Arn], '*']]
+            Principal: "*"
+            #AWS: "arn:aws:iam::YOUR_ACCOUNT_ID:user/YOUR_USER_NAME" -> iam only with auth to PutObject/GetObject
+            Condition:
+              Bool:
+                aws:SecureTransport: 'true'
+
+functions:
+  api:
+    handler: index.savePhoto
+    events:
+      - httpApi:
+          path: /
+          method: post
+
+plugins:
+  - serverless-offline         

@@ -8,6 +8,7 @@ provider:
   runtime: nodejs18.x
   environment: 
     BUCKET_NAME: ${self:service}-public-photos-${sls:stage}
+    PHOTOS_TABLE: ${self:service}-photos-${sls:stage}
   iam:
     role:
       statements:
@@ -19,8 +20,31 @@ provider:
           Action: 
             - "rekognition:detectLabels"
           Resource: "*"
+        - Effect: Allow
+          Action: 
+          - 'dynamodb:PutItem'
+          - 'dynamodb:Get*'
+          - 'dynamodb:Scan*'
+          - 'dynamodb:Query'
+          - 'dynamodb:UpdateItem'
+          - 'dynamodb:DeleteItem'
+          Resource: "arn:aws:dynamodb:::${self:service}-rekognition-photos-${sls:stage}"
 resources: 
-  Resources: 
+  Resources:
+    PhotosTable:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          TableName: ${self:service}-photos-${sls:stage}
+          AttributeDefinitions:
+            - AttributeName: primary_key
+              AttributeType: S
+          KeySchema:
+            - AttributeName: primary_key
+              KeyType: HASH
+          ProvisionedThroughput:
+            ReadCapacityUnits: 1
+            WriteCapacityUnits: 1
+
     PhotoBucket:
       Type: AWS::S3::Bucket
       Properties: 
@@ -51,12 +75,18 @@ resources:
                 aws:SecureTransport: 'true'
 
 functions:
-  api:
-    handler: index.savePhoto
+  savePhoto:
+    handler: functions/savePhoto.savePhoto
     events:
       - httpApi:
           path: /
           method: post
+  getPhotos:
+    handler: functions/getPhotos.getPhotos
+    events:
+      - httpApi:
+          path: /
+          method: get
 
 plugins:
   - serverless-offline         

@@ -6,7 +6,8 @@
   "dependencies": {
     "aws-sdk": "^2.1520.0",
     "lambda-multipart-parser": "^1.0.1",
-    "serverless-offline": "^13.3.2"
+    "serverless-offline": "^13.3.2",
+    "uuid": "^9.0.1"
   },
   "scripts": {
     "dev": "sls offline",
